@@ -44,6 +44,10 @@ import ImagePreview from "@/components/ImagePreview"
 // 字典标签组件
 import DictTag from '@/components/DictTag'
 
+localStorage.setItem('ragflowKey','ragflow-JmNjU2YzgwNTgzOTExZjBiOTY0M2UxND')
+localStorage.setItem('difyToken', 'app-zeKt6uYbsex2w54Pc3rNUcmr')
+
+
 const app = createApp(App)
 
 // 全局方法挂载

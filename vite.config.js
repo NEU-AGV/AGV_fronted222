@@ -56,6 +56,12 @@ export default defineConfig(({ mode, command }) => {
          '^/v3/api-docs/(.*)': {
           target: baseUrl,
           changeOrigin: true,
+        },
+        '/dify': {                     // ← 纯前缀就够
+          target      : 'http://localhost:81',
+          changeOrigin: true,
+          secure      : false,
+          rewrite     : p => p.replace(/^\/dify/, '')   // 去掉前缀
         }
       }
     },
