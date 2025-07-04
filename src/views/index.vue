@@ -2,9 +2,6 @@
   <div class="dashboard-container">
     <header class="dashboard-header">
       <h1 class="main-title">地铁隧道巡线大数据仿真和分析平台</h1>
-      <el-button type="primary" round class="enter-system-btn" @click="goToSystem">
-        进入系统
-      </el-button>
     </header>
 
     <el-row :gutter="20" class="stats-row">
@@ -235,8 +232,9 @@ const goToSystem = () => { router.push('/tasks'); };
 }
 .dashboard-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* 改为居中 */
   align-items: center;
+  text-align: center; /* 可选，影响子元素的文本对齐 */
   flex-shrink: 0;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(0, 212, 255, 0.3);

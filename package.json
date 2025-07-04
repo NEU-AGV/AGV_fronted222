@@ -1,8 +1,8 @@
 {
   "name": "ruoyi",
   "version": "3.9.0",
-  "description": "隧道循线管理系统",
-  "author": "隧道循线",
+  "description": "隧道巡线管理系统",
+  "author": "隧道巡线",
   "license": "MIT",
   "type": "module",
   "scripts": {

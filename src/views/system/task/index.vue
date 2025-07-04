@@ -1,6 +1,6 @@
 <template>
   <div class="task-management-container">
-    <el-tabs v-model="activeTab" class="task-tabs">
+    <el-tabs v-model="activeTab" class="task-tabs" type="card">
       <el-tab-pane label="列表视图" name="list" />
       <el-tab-pane label="日历视图" name="calendar" />
     </el-tabs>
@@ -86,7 +86,7 @@ function openDetailDialog(task) {
   flex-direction: column;
   width: 100%;
   height: calc(100vh - 140px);
-  padding: 16px;              /* ← 页面整体内边距 */
+  padding:0 16px;              /* ← 页面整体内边距 */
 }
 
 .task-tabs {
@@ -98,5 +98,27 @@ function openDetailDialog(task) {
   overflow: auto;
   padding-top: 10px;
   width: 100%;
+}
+.task-tabs:deep(.el-tabs__nav-wrap::after) {
+  background-color: transparent !important; /* 移除底部线条 */
+}
+
+.task-tabs:deep(.el-tabs__item) {
+  background-color: #f0f2f5; /* 设置未激活时的背景色，可替换为您喜欢的浅色 */
+  color: #606266; /* 设置未激活时的文字颜色，可替换为您喜欢的颜色 */
+  border: 1px solid #dcdfe6; /* 可选：添加边框 */
+  margin-right: 5px; /* 可选：增加卡片之间的间距 */
+}
+
+.task-tabs:deep(.el-tabs__item.is-active) {
+  background-color: #409eff; /* 设置激活时的背景色，可替换为您喜欢的主题色 */
+  color: #fff; /* 设置激活时的文字颜色，通常为白色 */
+  border-color: #409eff; /* 可选：激活时边框颜色与背景色一致 */
+}
+
+.task-tabs:deep(.el-tabs__item:hover) {
+  /* 可选：鼠标悬停时的样式，可以稍微改变背景色或增加阴影 */
+  background-color: #e6f7ff;
+  color: #409eff;
 }
 </style>

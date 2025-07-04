@@ -32,30 +32,19 @@
       style="width:100%"
   >
     <el-table-column type="selection" width="55" align="center" />
-    <el-table-column prop="taskId" label="编号" width="160">
-      <template #default="{row}">
-        <el-link type="primary" @click="emitDetail(row)">{{ row.taskId }}</el-link>
-      </template>
+    <el-table-column prop="taskId" label="编号" min-width="160">  <template #default="{row}">
+      <el-link type="primary" @click="emitDetail(row)">{{ row.taskId }}</el-link>
+    </template>
     </el-table-column>
-    <el-table-column prop="taskName" label="名称" width="180" />
-    <el-table-column prop="line" label="线路" width="90" />
-    <el-table-column prop="scope" label="范围" width="90" />
-    <el-table-column prop="startLocation" label="起始" width="90" />
-    <el-table-column prop="endLocation" label="终点" width="90" />
-    <el-table-column label="类型" width="90" align="center">
-      <template #default="{row}"><dict-tag :options="task_type" :value="row.taskType" /></template>
+    <el-table-column prop="taskName" label="名称" /> <el-table-column prop="line" label="线路" min-width="90" />       <el-table-column prop="scope" label="范围" min-width="90" />       <el-table-column prop="startLocation" label="起始" min-width="90" /> <el-table-column prop="endLocation" label="终点" min-width="90" /> <el-table-column label="类型" min-width="90" align="center">      <template #default="{row}"><dict-tag :options="task_type" :value="row.taskType" /></template>
+  </el-table-column>
+    <el-table-column label="优先级" min-width="90" align="center">   <template #default="{row}"><dict-tag :options="task_priority" :value="row.priority" /></template>
     </el-table-column>
-    <el-table-column label="优先级" width="90" align="center">
-      <template #default="{row}"><dict-tag :options="task_priority" :value="row.priority" /></template>
-    </el-table-column>
-    <el-table-column label="状态" width="90" align="center">
-      <template #default="{row}"><dict-tag :options="task_status" :value="row.status" /></template>
+    <el-table-column label="状态" min-width="90" align="center">      <template #default="{row}"><dict-tag :options="task_status" :value="row.status" /></template>
     </el-table-column>
 
-    <!-- ===== 操作列 ===== -->
     <el-table-column label="操作" fixed="right" width="260" align="center">
       <template #default="{row}">
-        <!-- 未开始(0) -> 进行中(1) -->
         <el-button
             v-if="row.status === '0'"
             link type="primary"
@@ -63,7 +52,6 @@
             v-hasPermi="['agv:task:start']"
         >执行</el-button>
 
-        <!-- 进行中(1) -> 已完成(2) / 已取消(3) -->
         <template v-if="row.status === '1'">
           <el-button
               link type="success"

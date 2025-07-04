@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import createVitePlugins from './vite/plugins'
 
-const baseUrl = 'http://localhost:8080' // 后端接口
+const baseUrl = 'http://172.22.49.179:8080' // 后端接口
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
@@ -52,13 +52,13 @@ export default defineConfig(({ mode, command }) => {
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/dev-api/, '')
         },
-         // springdoc proxy
-         '^/v3/api-docs/(.*)': {
+        // springdoc proxy
+        '^/v3/api-docs/(.*)': {
           target: baseUrl,
           changeOrigin: true,
         },
         '/dify': {                     // ← 纯前缀就够
-          target      : 'http://localhost:81',
+          target      : 'http://172.22.49.179:81',
           changeOrigin: true,
           secure      : false,
           rewrite     : p => p.replace(/^\/dify/, '')   // 去掉前缀

@@ -47,6 +47,25 @@
         <template #default="{ row }"><dict-tag :options="defect_type" :value="row.defectType" /></template>
       </el-table-column>
       <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+      <el-table-column label="缺陷图片" width="120" align="center">
+        <template #default="{ row }">
+          <el-image
+              v-if="row.imageUrl"
+              style="width: 80px; height: 80px; border-radius: 4px;"
+              :src="row.imageUrl"
+              :preview-src-list="[row.imageUrl]"
+              fit="cover"
+              preview-teleported
+          >
+            <template #error>
+              <div class="image-slot">
+                <el-icon><Picture /></el-icon>
+              </div>
+            </template>
+          </el-image>
+          <span v-else>无图</span>
+        </template>
+      </el-table-column>
       <el-table-column label="严重度" width="110" align="center">
         <template #default="{ row }"><dict-tag :options="defect_severity" :value="row.severity" /></template>
       </el-table-column>
@@ -187,6 +206,7 @@ const reset = () => {
 const ids = ref([])
 const onSelect = sel => { ids.value = sel.map(i => i.id) }
 import  useUserStore  from '@/store/modules/user'
+import {Picture} from "@element-plus/icons-vue";
 const userStore = useUserStore()
 
 async function flow(row, to) {

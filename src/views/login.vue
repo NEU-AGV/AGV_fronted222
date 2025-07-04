@@ -169,7 +169,7 @@ getCookie()
   justify-content: center;
   align-items: center;
   height: 100%;
-  background-image: url("../assets/images/login-background.jpeg");
+  background-image: url("../assets/images/1.png");
   background-size: cover;
 }
 .title {
