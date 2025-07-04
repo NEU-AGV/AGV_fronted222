@@ -52,10 +52,16 @@ export default defineConfig(({ mode, command }) => {
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/dev-api/, '')
         },
-         // springdoc proxy
-         '^/v3/api-docs/(.*)': {
+        // springdoc proxy
+        '^/v3/api-docs/(.*)': {
           target: baseUrl,
           changeOrigin: true,
+        },
+        '/dify': {                     // ← 纯前缀就够
+          target      : 'http://172.22.49.179:81',
+          changeOrigin: true,
+          secure      : false,
+          rewrite     : p => p.replace(/^\/dify/, '')   // 去掉前缀
         }
       }
     },

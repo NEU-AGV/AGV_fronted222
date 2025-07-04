@@ -1,349 +1,712 @@
 <template>
   <div class="ai-insights-container">
-    <div class="template-cards-header">
-      <div class="cards-list">
-        <el-card v-for="card in analysisTemplates" :key="card.id" class="template-card" shadow="hover" @click="handleCardClick(card)">
-          <div class="card-title">{{ card.title }}</div>
-        </el-card>
-      </div>
-      <el-button :icon="Plus" circle @click="handleAddCard" title="自定义添加卡片" />
-    </div>
-
-    <div class="main-content">
+    <!-- ========== 布局骨架：左右两列 ========== -->
+    <div class="main-layout">
+      <!-- ===== 左侧：侧边栏 ===== -->
       <div class="conversation-list">
-        <el-button type="primary" plain class="new-chat-btn" @click="handleNewConversation">新建聊天</el-button>
-        <div
-            v-for="convo in conversations"
-            :key="convo.id"
-            class="convo-item"
-            :class="{ active: activeConversationId === convo.id }"
-            @click="activeConversationId = convo.id"
-        >
-          {{ convo.title }}
+        <!-- 顶部操作 -->
+        <div class="conversation-actions">
+          <el-button
+              class="submit-button convo-item"
+              :class="{ 'active-convo': activeConversationId === null }"
+              @click="handleNewConversation"
+          >
+            <el-icon><Plus /></el-icon> 新建聊天
+          </el-button>
         </div>
-      </div>
 
-      <div class="chat-window">
-        <div class="chat-history-container">
-          <div v-for="(message, index) in activeConversation.messages" :key="index" :class="['chat-message', message.role]">
-            <el-avatar :icon="message.role === 'user' ? User : 'Avatar'" class="chat-avatar" />
-            <div class="chat-bubble">
-              <div v-if="message.attachment" class="attachment-display">
-                <el-icon><Document /></el-icon>
-                <span>{{ message.attachment.name }}</span>
-              </div>
-              <pre>{{ message.content }}</pre>
-            </div>
-          </div>
-        </div>
-        <div class="chat-input-area">
-          <div v-if="attachedFile" class="file-attachment-preview">
-            <el-icon><FolderChecked /></el-icon>
-            <span>{{ attachedFile.name }}</span>
-            <el-icon class="remove-icon" @click="removeAttachment"><Close /></el-icon>
-          </div>
-          <div class="input-actions">
-            <el-upload
-                action="#"
-                :show-file-list="false"
-                :before-upload="handleFileSelect"
-                class="upload-btn"
-            >
-              <el-icon title="上传文件"><FolderOpened /></el-icon>
-            </el-upload>
-            <div class="input-wrapper">
-              <el-input
-                  v-model="userInput"
-                  type="textarea"
-                  :rows="1"
-                  autosize
-                  resize="none"
-                  placeholder="请输入您的问题..."
-                  @keydown.enter.prevent="handleSendMessage"
-              />
-            </div>
-            <el-button type="primary" :icon="Promotion" @click="handleSendMessage">发送</el-button>
-          </div>
+        <!-- 滚动列表 -->
+        <div class="conversation-items">
+          <el-button
+              v-for="convo in conversations"
+              :key="convo.id"
+              class="submit-button convo-item"
+              :class="{ 'active-convo': activeConversationId === convo.id }"
+              @click="openConversation(convo.id)"
+          >
+            {{ convo.title }}
+          </el-button>
         </div>
       </div>
+      <!-- ===== /侧边栏 ===== -->
+
+      <!-- ===== 右侧：主内容区 ===== -->
+      <div class="main-content">
+        <!-- ---- 顶部知识库卡片 ---- -->
+        <div class="top-cards">
+          <div class="cards-list">
+            <el-card
+                v-for="kb in knowledgeBases"
+                :key="kb.id"
+                class="template-card"
+                :class="{ 'is-configured': kb.isSelected }"
+                shadow="hover"
+                @click="toggleKB(kb.id)"
+            >
+              <div class="card-content">
+                <div class="card-header">
+                  <div class="card-title">{{ kb.title }}</div>
+                  <el-icon
+                      v-if="kb.isSelected"
+                      class="clear-icon"
+                      @click.stop="toggleKB(kb.id)"
+                  ><Close /></el-icon>
+                </div>
+                <div class="card-description">{{ kb.description }}</div>
+              </div>
+              <el-checkbox
+                  v-model="kb.isSelected"
+                  class="card-selector-checkbox"
+                  @click.stop
+              />
+            </el-card>
+          </div>
+
+          <!-- 添加新知识库按钮 -->
+          <el-button
+              :icon="Plus"
+              circle
+              title="添加知识库"
+              class="add-card-btn"
+              @click="openKBDialog"
+          />
+        </div>
+        <!-- ---- /顶部知识库卡片 ---- -->
+
+        <!-- ---- 聊天窗口 ---- -->
+        <div class="chat-window">
+          <div class="chat-history-container">
+            <div
+                v-for="(msg, idx) in activeConversation?.messages || []"
+                :key="idx"
+                :class="['chat-message', msg.role]"
+            >
+              <el-avatar
+                  :icon="msg.role === 'user' ? User : 'Avatar'"
+                  class="chat-avatar"
+              />
+
+              <!-- 图片 -->
+              <template v-if="msg.type === 'image'">
+                <img :src="msg.url" style="max-width:180px;max-height:180px" />
+              </template>
+
+              <!-- 图表 -->
+              <template v-else-if="msg.type === 'chart'">
+                <v-chart
+                    :option="msg.content"
+                    autoresize
+                    class="chart-bubble"
+                    style="width:280px;height:280px"
+                />
+              </template>
+
+              <!-- 纯文本 -->
+              <template v-else>
+                <div class="chat-bubble">
+                  <pre>{{ msg.content }}</pre>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <div class="input-actions">
+              <div class="input-wrapper">
+                <el-input
+                    v-model="userInput"
+                    type="textarea"
+                    :rows="1"
+                    autosize
+                    resize="none"
+                    placeholder="可在此继续追问..."
+                    @keydown.enter.prevent="handleSendMessage"
+                />
+              </div>
+              <el-button
+                  type="primary"
+                  :icon="Promotion"
+                  class="send-button"
+                  @click="handleSendMessage"
+              >
+                发送
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <!-- ---- /聊天窗口 ---- -->
+      </div>
+      <!-- ===== /主内容区 ===== -->
     </div>
 
-    <el-dialog v-model="parameterDialog.visible" :title="parameterDialog.title" width="500px">
-      <el-form label-position="top">
-        <el-form-item v-if="parameterDialog.params.includes('task_ids')" label="选择分析的任务">
-          <el-select v-model="parameterDialog.form.taskIds" multiple placeholder="可多选" style="width: 100%;">
-            <el-option v-for="task in mockTasks" :key="task.taskId" :label="task.taskName" :value="task.taskId" />
-          </el-select>
+    <!-- ==== 新知识库弹窗 ==== -->
+    <el-dialog v-model="kbDialog.visible" title="添加知识库" width="520px">
+      <el-form label-position="top" :model="kbDialog.form">
+        <el-form-item label="标题" required>
+          <el-input v-model="kbDialog.form.title" placeholder="如：隧道裂缝资料库" />
         </el-form-item>
-        <el-form-item v-if="parameterDialog.params.includes('date_range')" label="选择时间范围">
-          <el-date-picker v-model="parameterDialog.form.dateRange" type="daterange" style="width: 100%;" />
+        <el-form-item label="描述">
+          <el-input
+              v-model="kbDialog.form.description"
+              type="textarea"
+              placeholder="一句话说明知识库内容"
+          />
         </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="parameterDialog.visible = false">取 消</el-button>
-        <el-button type="primary" @click="handleAnalysisSubmit">开始分析</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="cardDialog.visible" title="添加自定义分析卡片" width="500px">
-      <el-form :model="cardDialog.form" label-position="top">
-        <el-form-item label="卡片标题">
-          <el-input v-model="cardDialog.form.title" placeholder="例如：指定线路缺陷统计" />
-        </el-form-item>
-        <el-form-item label="描述或指令">
-          <el-input v-model="cardDialog.form.description" type="textarea" placeholder="描述这个卡片的功能或预设的指令" />
+        <el-form-item label="上传文件 (必选)" required>
+          <el-upload
+              ref="uploadRef"
+              :auto-upload="false"
+              :limit="1"
+              :on-change="handleKBFileChange"
+          >
+            <el-button type="primary" plain>选择文件</el-button>
+          </el-upload>
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="cardDialog.visible = false">取 消</el-button>
-          <el-button type="primary" @click="handleSaveCard">
-            保 存
-          </el-button>
-        </span>
+        <el-button @click="kbDialog.visible = false">取 消</el-button>
+        <el-button type="primary" @click="saveKnowledgeBase">保 存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import { ElMessage } from 'element-plus';
-import { User, Plus, FolderOpened, Promotion, Loading, Document, FolderChecked, Close } from '@element-plus/icons-vue';
-// import { getTasks } from '@/api/tasks.js';
-// import { getAnalysisTemplates, startStreamAnalysis } from '@/api/ai.js';
+/* ============================================================================
+ * 完整 <script setup>：统一解析并渲染  ```echarts … ``` 代码块
+ *  - 历史消息、流式增量统一调用 extractEchartsOption()
+ *  - 其余逻辑与之前版本保持一致
+ * ==========================================================================*/
 
-const USE_REAL_API = false;
+import { ref, computed, nextTick, onMounted, getCurrentInstance } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus, Promotion, User } from '@element-plus/icons-vue'
 
-const isLoading = ref(false);
-const userInput = ref('');
-const attachedFile = ref(null);
-const analysisTemplates = ref([]);
-const conversations = ref([ { id: 'convo-1', title: '默认会话', messages: [ { role: 'model', content: '您好！我是您的AI数据洞察助手。' } ] } ]);
-const activeConversationId = ref('convo-1');
-const activeConversation = computed(() => conversations.value.find(c => c.id === activeConversationId.value));
-const cardDialog = reactive({ visible: false, form: { title: '', description: '' } });
-const mockTasks = ref([]);
-const parameterDialog = reactive({ visible: false, title: '', params: [], form: { taskIds: [], dateRange: [] }, analysisType: '' });
-let eventSource = null;
+/* ---------- ECharts (vue-echarts) 按需注册 ---------- */
+import VChart from 'vue-echarts'
+import { use as echartsUse } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { PieChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+echartsUse([CanvasRenderer, PieChart, TitleComponent, TooltipComponent, LegendComponent])
 
-const fetchInitialData = async () => {
-  if (USE_REAL_API) {
-    try {
-      analysisTemplates.value = await getAnalysisTemplates();
-      const taskRes = await getTasks({ page: 1, pageSize: 100 });
-      mockTasks.value = taskRes.list;
-    } catch(e) { console.error(e); }
-  } else {
-    analysisTemplates.value = [
-      { id: 'defect_summary', title: '缺陷记录分析', description: '分析指定任务或时间范围内的缺陷...', required_params: ['task_ids', 'date_range'] },
-      { id: 'personnel_efficiency', title: '人员效率分析', description: '分析指定人员的任务完成频率...', required_params: ['user_ids', 'date_range'] }
-    ];
-    mockTasks.value = [ { taskId: 'TASK-20250626-001', taskName: '1号线隧道巡检' }, { taskId: 'TASK-20250627-001', taskName: '2号线设备检查' } ];
-  }
-};
+/* ---------- 当前登录人 ---------- */
+const { proxy } = getCurrentInstance()
+proxy.useDict('agv_defect_type', 'agv_defect_severity')
+const currentUser =
+    proxy.$store?.state?.user?.nickName ||
+    proxy.$store?.state?.user?.userName ||
+    'admin'
 
-onMounted(() => { fetchInitialData(); });
-onUnmounted(() => { if (eventSource) eventSource.close(); });
+/* ---------- 常量 ---------- */
+const DIFY = '/dify'
+const USE_REAL_API = ref(true)
 
-const handleNewConversation = () => {
-  const newConvo = {
-    id: `convo-${Date.now()}`,
-    title: `新的聊天 ${conversations.value.length}`,
-    messages: [ { role: 'model', content: '您好！有什么可以帮助您的吗？' } ]
-  };
-  conversations.value.unshift(newConvo);
-  activeConversationId.value = newConvo.id;
-};
-
-const handleFileSelect = (rawFile) => {
-  attachedFile.value = rawFile;
-  return false;
-};
-
-const removeAttachment = () => {
-  attachedFile.value = null;
-};
-
-const handleCardClick = (card) => {
-  parameterDialog.title = `配置分析 - ${card.title}`;
-  parameterDialog.params = card.required_params;
-  parameterDialog.analysisType = card.id;
-  parameterDialog.form.taskIds = [];
-  parameterDialog.form.dateRange = [];
-  parameterDialog.visible = true;
-};
-
-const handleSendMessage = () => {
-  if (!userInput.value.trim() && !attachedFile.value) {
-    return;
-  }
-
-  const userMessage = {
-    role: 'user',
-    content: userInput.value,
-    attachment: attachedFile.value ? {
-      name: attachedFile.value.name,
-      size: attachedFile.value.size,
-      type: attachedFile.value.type,
-      file: attachedFile.value
-    } : null
-  };
-  activeConversation.value.messages.push(userMessage);
-  userInput.value = '';
-  attachedFile.value = null;
-
-  simulateStreamingResponse(activeConversationId.value);
-};
-
-const handleAnalysisSubmit = () => {
-  const cardTitle = analysisTemplates.value.find(c => c.id === parameterDialog.analysisType)?.title || '自定义分析';
-  const newConvo = { id: `convo-${Date.now()}`, title: cardTitle, messages: [] };
-  const userRequestContent = `请为我执行: "${cardTitle}"\n任务范围: ${parameterDialog.form.taskIds.join(', ') || '全部'}\n时间范围: ${parameterDialog.form.dateRange?.map(d => new Date(d).toLocaleDateString()).join(' 至 ') || '全部'}`;
-  newConvo.messages.push({ role: 'user', content: userRequestContent });
-  conversations.value.unshift(newConvo);
-  activeConversationId.value = newConvo.id;
-  parameterDialog.visible = false;
-
-  if (USE_REAL_API) {
-    const requestData = {
-      analysisType: parameterDialog.analysisType,
-      parameters: { ...parameterDialog.form }
-    };
-    streamResponseFromAPI(requestData, newConvo.id);
-  } else {
-    simulateStreamingResponse(newConvo.id);
-  }
-};
-
-const streamResponseFromAPI = (requestData, convoId) => {
-  isLoading.value = true;
-  const currentConvo = conversations.value.find(c => c.id === convoId);
-  if (!currentConvo) return;
-  currentConvo.messages.push({ role: 'model', content: '' });
-
-  eventSource = startStreamAnalysis(requestData);
-  eventSource.onmessage = (event) => {
-    if (index === 0) isLoading.value = false;
-    if (event.data === '[DONE]') {
-      eventSource.close();
-      return;
-    }
-    const lastMessage = currentConvo.messages[currentConvo.messages.length - 1];
-    lastMessage.content += event.data;
-  };
-  eventSource.onerror = (err) => {
-    console.error("EventSource failed:", err);
-    ElMessage.error("与AI服务器连接失败");
-    isLoading.value = false;
-    eventSource.close();
-  };
-};
-
-const simulateStreamingResponse = (convoId) => {
-  isLoading.value = true;
-  const currentConvo = conversations.value.find(c => c.id === convoId);
-  if (!currentConvo) return;
-  currentConvo.messages.push({ role: 'model', content: '' });
-
-  const mockResponse = "根据您的要求，对任务 [TASK-20250626-001] 的分析结果如下：\n\n1.  **主要缺陷类型**: \n    * 裂缝 (45%)\n    * 渗水 (30%)\n\n2.  **根本原因分析**: \n    * 结构性裂缝多与沉降有关。\n    * 渗水问题集中在接口处，建议加强防水工艺。\n\n3.  **改进建议**: \n    * 对K10-K15段进行重点沉降观测。";
-  let index = 0;
-
-  const intervalId = setInterval(() => {
-    if (index === 0) isLoading.value = false;
-    if (index < mockResponse.length) {
-      const lastMessage = currentConvo.messages[currentConvo.messages.length - 1];
-      lastMessage.content += mockResponse[index];
-      index++;
-      nextTick(() => { /* scroll to bottom */ });
-    } else {
-      clearInterval(intervalId);
-    }
-  }, 50);
-};
-
-const handleAddCard = () => {
-  cardDialog.form.title = '';
-  cardDialog.form.description = '';
-  cardDialog.visible = true;
-};
-
-const handleSaveCard = () => {
-  analysisTemplates.value.push({
-    id: `custom-${Date.now()}`,
-    title: cardDialog.form.title,
-    description: cardDialog.form.description,
-  });
-  cardDialog.visible = false;
-};
-</script>
-
-<style scoped>
-.ai-insights-container { padding: 20px; display: flex; flex-direction: column; height: calc(100vh - 140px); gap: 20px; }
-.template-cards-header { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
-.cards-list { display: flex; gap: 20px; overflow-x: auto; }
-.template-card { cursor: pointer; transition: all 0.2s ease-in-out; min-width: 200px; }
-.template-card:hover { transform: translateY(-5px); box-shadow: var(--el-box-shadow-light); }
-.card-title { font-weight: bold; margin-bottom: 8px; }
-
-.main-content { flex-grow: 1; display: flex; gap: 20px; min-height: 0; }
-.conversation-list { width: 240px; background-color: #fcfcfc; border-radius: 4px; border: 1px solid var(--el-border-color-light); padding: 10px; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-.new-chat-btn { width: 100%; margin-bottom: 10px; }
-.convo-item { padding: 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-.convo-item:hover { background-color: #f5f7fa; }
-.convo-item.active { background-color: var(--el-color-primary-light-9); color: var(--el-color-primary); }
-
-.chat-window { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
-.chat-history-container { flex-grow: 1; overflow-y: auto; background-color: #f5f7fa; padding: 20px; border-radius: 4px; }
-
-/* ****** 修改开始 ****** */
-.chat-input-area {
-  display: flex;
-  flex-direction: column; /* 1. 改为垂直布局 */
-  gap: 10px; /* 增加元素间距 */
-  align-items: flex-start; /* 左对齐 */
-  padding-top: 15px;
-  flex-shrink: 0;
+/* ============================================================================
+ *  0️⃣ 通用：把 ```echarts … ``` 代码块解析成 option
+ * ==========================================================================*/
+function extractEchartsOption (text) {
+  if (typeof text !== 'string') return null
+  const m = text.match(/```echarts\s*([\s\S]*?)```/)
+  if (!m) return null
+  try { return JSON.parse(m[1]) } catch { return null }
 }
 
+/* ============================================================================
+ *  1️⃣ 会话 & 历史
+ * ==========================================================================*/
+const conversations = ref([])      /* {id,title,messages,loaded,difyConvId} */
+const activeConversationId = ref(null)
+const activeConversation = computed(() =>
+    conversations.value.find(c => c.id === activeConversationId.value)
+)
+
+/* 拉取会话列表 + 历史 */
+async function loadAllConversations () {
+  const tk = localStorage.getItem('difyToken')
+  if (!tk) { ElMessage.error('缺少 difyToken'); return }
+
+  /* 会话列表 */
+  const listRes = await fetch(
+      `${DIFY}/v1/conversations?user=${encodeURIComponent(currentUser)}`,
+      { headers:{ Authorization:`Bearer ${tk}` } }
+  )
+  if (!listRes.ok) { ElMessage.error('会话列表失败'); return }
+  const list = (await listRes.json()).data
+
+  /* 并行拉每个会话历史 */
+  const convs = await Promise.all(list.map(async ({ id, name }) => {
+    const msgRes = await fetch(
+        `${DIFY}/v1/messages?user=${encodeURIComponent(currentUser)}&conversation_id=${id}&limit=100`,
+        { headers:{ Authorization:`Bearer ${tk}` } }
+    )
+    const msgs = msgRes.ok ? (await msgRes.json()).data : []
+    const parsed = []
+
+    msgs.forEach(m => {
+      /* 用户提问 */
+      if (m.query) {
+        const opt = extractEchartsOption(m.query)
+        parsed.push(
+            opt
+                ? { role:'user',  type:'chart', content:opt }
+                : { role:'user',  content:m.query }
+        )
+      }
+      /* 模型回答 */
+      if (m.answer) {
+        const opt = extractEchartsOption(m.answer)
+        parsed.push(
+            opt
+                ? { role:'model', type:'chart', content:opt }
+                : { role:'model', content:m.answer }
+        )
+      }
+      /* 附件（图片等） */
+      if (Array.isArray(m.message_files) && m.message_files.length) {
+        m.message_files.forEach(f => {
+          parsed.push({
+            role   : f.belongs_to === 'assistant' ? 'model' : 'user',
+            type   : f.type,  // 目前 Dify 只返回 image
+            url    : f.url,
+            content: ''
+          })
+        })
+      }
+    })
+
+    return {
+      id,
+      title : name || '未命名会话',
+      messages: parsed,
+      loaded : true,
+      difyConvId: id
+    }
+  }))
+
+  conversations.value = convs
+  if (convs.length) activeConversationId.value = convs[0].id
+}
+
+/* 新建本地会话 */
+function handleNewConversation () {
+  const tmp = `local-${Date.now()}`
+  conversations.value.unshift({
+    id: tmp,
+    title: `聊天 ${conversations.value.length + 1}`,
+    messages: [{ role:'model', content:'您好！有什么可以帮您？' }],
+    loaded : true
+  })
+  activeConversationId.value = tmp
+}
+
+/* 切换会话 */
+function openConversation (id) { activeConversationId.value = id }
+
+/* ============================================================================
+ *  2️⃣ 知识库 DataSet
+ * ==========================================================================*/
+const knowledgeBases = ref([])
+const kbDialog = ref({ visible:false, form:{ title:'', description:'', file:null } })
+
+function openKBDialog () {
+  kbDialog.value.form = { title:'', description:'', file:null }
+  kbDialog.value.visible = true
+}
+const handleKBFileChange = f => (kbDialog.value.form.file = f.raw)
+const toggleKB = id => {
+  const kb = knowledgeBases.value.find(k => k.id === id)
+  if (kb) kb.isSelected = !kb.isSelected
+}
+
+/* 新建并上传 DataSet */
+async function saveKnowledgeBase () {
+  const { title, description, file } = kbDialog.value.form
+  if (!title.trim()) return ElMessage.error('标题必填')
+  if (!file)         return ElMessage.error('请选择文件')
+
+  const tk = localStorage.getItem('difyToken')
+  if (!tk) return ElMessage.error('缺少 difyToken')
+
+  try {
+    /* 1. 新建数据集 */
+    const ds = await fetch(`${DIFY}/v1/datasets`, {
+      method : 'POST',
+      headers: {
+        Authorization : `Bearer dataset-ZT75C4yxT0jTeyzUajCC686e`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name:title, description })
+    })
+    if (!ds.ok) throw new Error(await ds.text())
+    const { id } = await ds.json()
+
+    /* 2. 上传文件 */
+    const form = new FormData()
+    form.append('file', file)
+    form.append('data', JSON.stringify({
+      indexing_technique:'high_quality',
+      process_rule:{ mode:'automatic' }
+    }))
+    const up = await fetch(
+        `${DIFY}/v1/datasets/${id}/document/create-by-file`,
+        {
+          method : 'POST',
+          headers: { Authorization:`Bearer dataset-ZT75C4yxT0jTeyzUajCC686e` },
+          body   : form
+        }
+    )
+    if (!up.ok) throw new Error(await up.text())
+
+    knowledgeBases.value.unshift({ id, title, description, isSelected:false })
+    ElMessage.success('上传成功')
+  } catch (e) { ElMessage.error(e.message) }
+  finally { kbDialog.value.visible = false }
+}
+
+/* 拉取 DataSet 列表 */
+async function loadDatasets () {
+  const tk = localStorage.getItem('difyToken')
+  if (!tk) return
+  const res = await fetch(`${DIFY}/v1/datasets?page=1&page_size=100`, {
+    headers:{ Authorization:`Bearer dataset-ZT75C4yxT0jTeyzUajCC686e` }
+  })
+  if (!res.ok) return
+  const json = await res.json()
+  knowledgeBases.value = json.data.map(ds => ({
+    id:ds.id, title:ds.name, description:ds.description, isSelected:false
+  }))
+}
+
+/* ============================================================================
+ *  3️⃣ 聊天发送 & 流式回答
+ * ==========================================================================*/
+const userInput = ref('')
+
+function scrollBottom () {
+  nextTick(() => {
+    const box = document.querySelector('.chat-history-container')
+    box && (box.scrollTop = box.scrollHeight)
+  })
+}
+
+async function streamCompletion (convo) {
+  const tk = localStorage.getItem('difyToken')
+  if (!tk) return ElMessage.error('缺少 difyToken')
+
+  const body = {
+    query          : convo.messages.at(-1).content,
+    response_mode  : 'streaming',
+    conversation_id: convo.difyConvId || '',
+    user           : currentUser,
+    inputs         : {},
+    knowledge_config:{
+      mode:'datasets',
+      dataset_ids: knowledgeBases.value.filter(k => k.isSelected).map(k => k.id)
+    }
+  }
+  const headers = { Authorization:`Bearer ${tk}`, 'Content-Type':'application/json' }
+  if (tk.startsWith('user-')) headers['X-API-APP-ID'] = '<YOUR_APP_ID>'
+
+  const resp = await fetch(`${DIFY}/v1/chat-messages`, {
+    method : 'POST',
+    headers,
+    body   : JSON.stringify(body)
+  })
+  if (!resp.ok) { ElMessage.error(`Dify ${resp.status}`); return }
+
+  /* 把临时 ID 换成真实 ID */
+  if (!convo.difyConvId) {
+    const real = resp.headers.get('x-conversation-id')
+    if (real) { convo.difyConvId = real; convo.id = real }
+  }
+
+  /* 先放一个占位回答 */
+  convo.messages.push({ role:'model', content:'' })
+  const last   = convo.messages.at(-1)
+  const reader = resp.body.getReader()
+  const dec    = new TextDecoder()
+
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+
+    dec.decode(value).split('\n').filter(Boolean).forEach(line => {
+      if (!line.startsWith('data:')) return
+      const payload = line.slice(5).trim()
+      if (payload === '[DONE]') { reader.cancel(); return }
+
+      try {
+        const obj = JSON.parse(payload)
+
+        /* 1. 增量文本 */
+        if (typeof obj.answer === 'string') {
+          /* 看看这段文本里有没有完整的 ```echarts``` 代码块 */
+          const opt = extractEchartsOption(obj.answer)
+          if (opt) {
+            last.type    = 'chart'
+            last.content = opt
+          } else {
+            last.content += obj.answer
+          }
+        }
+
+        /* 2. Dify 直接推送 JSON（无 ```echarts``` 包裹） */
+        if (obj.series) {
+          last.type    = 'chart'
+          last.content = obj
+        }
+
+      } catch { /* 非 JSON 直接忽略 */ }
+      scrollBottom()
+    })
+  }
+}
+
+function handleSendMessage () {
+  if (!userInput.value.trim() || !activeConversation.value) return
+  activeConversation.value.messages.push({ role:'user', content:userInput.value })
+  userInput.value = ''
+  streamCompletion(activeConversation.value)
+}
+
+/* ============================================================================
+ *  4️⃣ 生命周期
+ * ==========================================================================*/
+onMounted(async () => {
+  if (USE_REAL_API.value) {
+    await loadDatasets()
+    await loadAllConversations()
+  }
+})
+</script>
+
+
+<style scoped>
+/* ===== 1. 整体布局与背景 ===== */
+.ai-insights-container {
+  background-color: #f5f7fa;
+  color: #303133;
+  padding: 20px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+.main-layout {
+  display: flex;
+  height: calc(100% - 40px);
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* ===== 2. 主要区块 ===== */
+.conversation-list,
+.main-content .top-cards,
+.chat-window {
+  background: #ffffff;
+  border: 1px solid #e4e7ed;
+  padding: 15px;
+  border-radius: 8px;
+}
+.conversation-list {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  gap: 10px;
+}
+.conversation-actions { flex: 0 0 auto; }
+.conversation-items {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.top-cards {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ===== 3. 卡片与按钮 ===== */
+.cards-list {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+.template-card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  min-width: 220px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  position: relative;
+  padding-bottom: 15px;
+}
+.template-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.template-card.is-configured {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 10px rgba(64, 158, 255, 0.2);
+}
+.card-title { font-weight: bold; color: #303133; }
+.card-description,
+.card-selection-details { font-size: 13px; color: #606266; }
+.clear-icon { color: #909399; }
+.clear-icon:hover { color: #f56c6c; }
+.card-selector-checkbox {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+/* 按钮统一蓝白配色 */
+.submit-button,
+.send-button,
+.close-button,
+.batch-analysis-btn {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  color: #fff;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+.submit-button:hover,
+.send-button:hover,
+.close-button:hover,
+.batch-analysis-btn:hover {
+  background-color: #79bbff;
+  border-color: #79bbff;
+}
+
+/* 左侧会话条目 */
+.submit-button.convo-item {
+  background-color: #fff;
+  color: #303336;
+  border: 1px solid #dcdfe6;
+  justify-content: flex-start;
+}
+.submit-button.convo-item:hover {
+  background-color: #ecf5ff;
+  color: var(--el-color-primary);
+  border-color: #c6e2ff;
+}
+.active-convo {
+  background-color: var(--el-color-primary-light-9) !important;
+  color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary-light-7) !important;
+}
+
+/* ===== 4. 聊天窗口 ===== */
+.chat-history-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  border-radius: 4px;
+  background-color: #fff;
+}
+.chat-message.user .chat-bubble {
+  background-color: var(--el-color-primary);
+  color: #fff;
+}
+.chat-message.model .chat-bubble {
+  background-color: #e9e9eb;
+  color: #303133;
+}
+.chat-bubble {
+  padding: 10px 15px;
+  border-radius: 10px;
+  max-width: 80%;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+pre {
+  margin: 0;
+  font-family: inherit;
+}
+.chat-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  flex-shrink: 0;
+  padding-top: 15px;
+  border-top: 1px solid #e4e7ed;
+  margin-top: 15px;
+}
 .input-actions {
   display: flex;
   gap: 10px;
-  align-items: flex-end; /* 让按钮和输入框底部对齐 */
-  width: 100%; /* 占满父容器宽度 */
+  align-items: flex-end;
+  width: 100%;
 }
-
 .input-wrapper {
-  flex-grow: 1; /* 2. 关键：让输入框包裹层占据所有剩余空间 */
-  min-width: 0; /* 在flex布局中防止子元素溢出 */
+  flex-grow: 1;
+  min-width: 0;
 }
 
-.file-attachment-preview {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  background-color: #ecf5ff;
-  border: 1px solid #d9ecff;
-  border-radius: 4px;
-  font-size: 13px;
-  /* `align-self: flex-start` 已被父元素的 `align-items` 替代 */
+/* ===== 5. 弹窗 ===== */
+:deep(.el-textarea__inner) {
+  background-color: #f5f7fa !important;
+  color: #303133 !important;
+  border-color: #dcdfe6 !important;
+  box-shadow: none !important;
+  caret-color: var(--el-color-primary) !important;
 }
-/* ****** 修改结束 ****** */
+:deep(.back-task .el-form-item__label) { color: #303133; }
+.back-task,
+.task {
+  background: #fff;
+  border-color: #e4e7ed;
+  color: #303133;
+}
 
-.upload-btn .el-icon { font-size: 20px; color: #666; cursor: pointer; }
-.remove-icon { cursor: pointer; color: #999; }
-.remove-icon:hover { color: var(--el-color-primary); }
-
-/* 聊天气泡样式 */
-.chat-message { display: flex; gap: 12px; margin-bottom: 20px; }
+/* 聊天条目布局 */
+.chat-message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
 .chat-message.model { justify-content: flex-start; }
 .chat-message.user { justify-content: flex-end; }
-.chat-message.user .chat-bubble { background-color: #409eff; color: #fff; }
 .chat-message.user .chat-avatar { order: 2; }
-.chat-bubble { padding: 10px 15px; border-radius: 10px; background-color: #fff; max-width: 80%; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
-pre { margin: 0; font-family: inherit; }
+.chat-message { max-width: 100%; }
 
-.attachment-display { display: flex; align-items: center; gap: 5px; background-color: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 4px; margin-bottom: 5px; }
+/* 图表气泡 */
+.chart-bubble {
+  max-width: 80%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+}
 
+/* ② 预格式文本也要跟随折行规则 */
+.chat-bubble pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
 </style>
