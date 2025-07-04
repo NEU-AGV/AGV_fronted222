@@ -249,4 +249,8 @@ async function submit(){
 }
 .image-placeholder{color:#909399;display:flex;flex-direction:column;align-items:center;gap:10px}
 .image-placeholder .el-icon{font-size:40px}
+.selected-image-preview .el-image {
+  max-width: 100%;
+  max-height: 100%;
+}
 </style>

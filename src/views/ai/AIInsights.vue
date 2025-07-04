@@ -185,10 +185,71 @@ import { Plus, Promotion, User } from '@element-plus/icons-vue'
 /* ---------- ECharts (vue-echarts) 按需注册 ---------- */
 import VChart from 'vue-echarts'
 import { use as echartsUse } from 'echarts/core'
+
+// 渲染器
 import { CanvasRenderer } from 'echarts/renderers'
-import { PieChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-echartsUse([CanvasRenderer, PieChart, TitleComponent, TooltipComponent, LegendComponent])
+
+// 图表类型
+import {
+  BarChart,
+  LineChart,
+  PieChart,
+  ScatterChart,
+  RadarChart,
+  MapChart,
+  GaugeChart
+} from 'echarts/charts'
+
+// 组件
+import {
+  GridComponent,
+  PolarComponent,
+  RadarComponent,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  ToolboxComponent,
+  DataZoomComponent,
+  VisualMapComponent,
+  GeoComponent,
+  TimelineComponent,
+  MarkPointComponent,
+  MarkLineComponent,
+  MarkAreaComponent,
+  DatasetComponent
+} from 'echarts/components'
+
+// 注册所有用到的
+echartsUse([
+  /* 渲染器 */
+  CanvasRenderer,
+
+  /* 图表类型 */
+  BarChart,
+  LineChart,
+  PieChart,
+  ScatterChart,
+  RadarChart,
+  MapChart,
+  GaugeChart,
+
+  /* 常用组件 */
+  GridComponent,
+  PolarComponent,
+  RadarComponent,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  ToolboxComponent,
+  DataZoomComponent,
+  VisualMapComponent,
+  GeoComponent,
+  TimelineComponent,
+  MarkPointComponent,
+  MarkLineComponent,
+  MarkAreaComponent,
+  DatasetComponent
+])
 
 /* ---------- 当前登录人 ---------- */
 const { proxy } = getCurrentInstance()
