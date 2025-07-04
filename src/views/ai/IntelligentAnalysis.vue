@@ -228,9 +228,22 @@ async function submit(){
 .gallery-item .el-image{width:100%;height:120px}
 .item-overlay{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:4px;text-align:center}
 
-.selected-image-preview{width:100%;height:250px;background:#f5f7fa;border:1px dashed var(--el-border-color);
-  display:flex;justify-content:center;align-items:center;border-radius:4px;margin-bottom:20px}
-.selected-image-preview .el-image {
+.selected-image-preview {
+  width: 100%;
+  /* 使用 aspect-ratio 让高度根据宽度自动缩放，4 / 3 约等于 1.33 */
+  aspect-ratio: 4 / 3;
+  /* 设置一个最大高度，防止在很宽的屏幕上无限变大 */
+  max-height: 450px;
+  /* 设置一个最小高度，防止在很窄的屏幕上变得过小 */
+  min-height: 250px;
+  background: #f5f7fa;
+  border: 1px dashed var(--el-border-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}.selected-image-preview .el-image {
   max-width: 100%;
   max-height: 100%;
 }
